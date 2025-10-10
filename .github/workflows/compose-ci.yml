@@ -1,22 +1,21 @@
-name: Compose CI (with Secrets)
+name: Compose CI + Push to ECR
 
 on:
   push:
-    branches: [ "**" ]
+    branches: [ "main", "dev", "**" ]
   pull_request:
 
 jobs:
-  compose:
+  build-and-push:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: 🧾 Checkout repository
         uses: actions/checkout@v4
 
-      - name: Create .env from GitHub Secrets
-        env:
-          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+      - name: ⚙️ Create backend .env file
         run: |
+          mkdir -p backend
           {
             echo "DATABASE_URL=${{ secrets.DATABASE_URL }}"
             echo "SECRET_KEY=${{ secrets.SECRET_KEY }}"
@@ -28,83 +27,57 @@ jobs:
             echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}"
           } > backend/.env
 
-      - name: docker compose up (build + wait)
+      - name: 🧱 Build all services (backend + frontend)
         run: |
-          set -e
-          docker compose build --no-cache backend
+          docker compose build --no-cache
+
+      - name: 🧪 Run services (integration test)
+        run: |
           docker compose up -d --wait --wait-timeout 180
-
-      - name: Show diagnostics on failure
-        if: ${{ failure() }}
-        run: |
-          echo "===== docker ps ====="
-          docker ps
-          echo "===== health inspect ====="
-          CID=$(docker ps -qf name=ecommerce_backend || true)
-          docker inspect --format '{{json .State.Health }}' "$CID" || true
-          echo "===== backend logs ====="
-          docker logs "$CID" || true
-          echo "===== compose ps ====="
-          docker compose ps
-
-
-      - name: Smoke tests
-        run: |
-          curl -fsS http://localhost:8000/health || exit 1 || true
+          echo "==> Checking backend health"
+          curl -fsS http://localhost:8000/health || exit 1
+          echo "==> Checking frontend health"
           curl -fsS http://localhost:3000/health || true
 
-      - name: Summary
-        if: always()
-        run: |
-          {
-            echo "## Compose status: ${{ job.status }}"
-            docker compose ps || true
-          } >> "$GITHUB_STEP_SUMMARY"
-
-      - name: docker compose down
+      - name: 🧹 Tear down containers
         if: always()
         run: docker compose down -v --remove-orphans || true
 
-      - name: Configure AWS credentials
+      - name: 🔐 Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Login to Amazon ECR
+      - name: 🔑 Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-      - name: Tag and Push backend image to ECR
+      - name: 🚀 Push backend image to ECR
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: dohelmoto-backend
           IMAGE_TAG: latest
         run: |
-          echo "==> Tagging image..."
-          docker tag temporary-app-name $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-
-          echo "==> Pushing image to ECR..."
+          docker tag dohelmoto-backend:latest $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
-          echo "==> Verifying image exists in ECR..."
-          aws ecr describe-images \
-            --repository-name $ECR_REPOSITORY \
-            --image-ids imageTag=$IMAGE_TAG \
-            --region ${{ secrets.AWS_REGION }}
-
-      - name: ECR Summary
-        if: always()
+      - name: 🚀 Push frontend image to ECR
         env:
-          ECR_REPOSITORY: dohelmoto-backend
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: dohelmoto-frontend
           IMAGE_TAG: latest
         run: |
-          echo "## ECR status for image: $ECR_REPOSITORY:$IMAGE_TAG" >> "$GITHUB_STEP_SUMMARY"
-          aws ecr describe-images \
-            --repository-name $ECR_REPOSITORY \
-            --image-ids imageTag=$IMAGE_TAG \
-            --region ${{ secrets.AWS_REGION }} \
-            --output table >> "$GITHUB_STEP_SUMMARY" || echo "Image not found in ECR" >> "$GITHUB_STEP_SUMMARY"
+          docker tag dohelmoto-frontend:latest $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
+      - name: 🧾 Verify images in ECR
+        env:
+          REGION: ${{ secrets.AWS_REGION }}
+        run: |
+          echo "==> Verifying backend..."
+          aws ecr describe-images --repository-name dohelmoto-backend --region $REGION --output table
+          echo "==> Verifying frontend..."
+          aws ecr describe-images --repository-name dohelmoto-frontend --region $REGION --output table
 
