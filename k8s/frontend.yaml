@@ -15,7 +15,8 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: your-registry/ecommerce-frontend:latest
+        image: ecommerce-frontend:v4
+        imagePullPolicy: Never
         ports:
         - containerPort: 80
         env:
@@ -60,7 +61,8 @@ spec:
   ports:
   - port: 80
     targetPort: 80
-  type: ClusterIP
+    nodePort: 30080
+  type: NodePort
 
 ---
 apiVersion: autoscaling/v2

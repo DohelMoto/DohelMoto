@@ -163,10 +163,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const loginWithGoogle = async () => {
     try {
       const googleClientId = process.env.REACT_APP_GOOGLE_CLIENT_ID || '14699536724-etdb0dco7r53sepk33p9356aaechv2l8.apps.googleusercontent.com';
-      console.log('Google Client ID:', googleClientId);
+      console.log('Starting Google login with Client ID:', googleClientId);
       
       if (!googleClientId) {
-        toast.error('Google OAuth not configured. Please contact support.');
+        toast.error('Google OAuth not configured');
         return;
       }
 
@@ -184,45 +184,83 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         });
       }
 
-      // Initialize Google OAuth
+      // Initialize and render button directly
+      const handleCredentialResponse = async (response: any) => {
+        try {
+          console.log('Google OAuth response received');
+          
+          // Send the credential to backend for verification
+          const result = await fetch(`${API_BASE_URL}/auth/google`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ token: response.credential }),
+          });
+          
+          const data = await result.json();
+          
+          if (!result.ok) {
+            throw new Error(data.detail || 'Google login failed');
+          }
+          
+          const { access_token } = data;
+          
+          // Store token
+          localStorage.setItem('token', access_token);
+          
+          // Get user info after login
+          const userResponse = await fetch(`${API_BASE_URL}/auth/me`, {
+            headers: {
+              'Authorization': `Bearer ${access_token}`,
+            },
+          });
+          const userData = await userResponse.json();
+          setUser(userData);
+          
+          navigate('/');
+          toast.success('התחברת בהצלחה עם Google!');
+        } catch (error: any) {
+          console.error('Google auth error:', error);
+          const errorMessage = error.message || 'Google login failed';
+          toast.error(errorMessage);
+        }
+      };
+
+      // Initialize Google Identity Services
       window.google.accounts.id.initialize({
         client_id: googleClientId,
-        callback: async (response: any) => {
-          try {
-            console.log('Google OAuth response received:', response);
-            
-            // Send the credential to backend for verification
-            const result = await api.googleAuth(response.credential);
-            const { access_token } = result.data;
-            
-            // Store token and update user state
-            localStorage.setItem('token', access_token);
-            await fetchUser();
-            navigate('/');
-            toast.success('Logged in with Google successfully!');
-          } catch (error: any) {
-            console.error('Google auth error:', error);
-            const errorMessage = error.response?.data?.detail || 'Google login failed';
-            toast.error(errorMessage);
-          }
-        },
-        auto_select: false,
-        cancel_on_tap_outside: true
+        callback: handleCredentialResponse,
       });
 
-      // Trigger Google OAuth popup
-      window.google.accounts.id.prompt((notification: any) => {
-        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-          // Fallback to manual button click
-          const button = document.getElementById('google-login-button');
-          if (button) {
-            button.click();
-          }
-        }
+      // Render the button in a temporary container
+      const tempDiv = document.createElement('div');
+      tempDiv.style.position = 'fixed';
+      tempDiv.style.top = '-1000px';
+      tempDiv.style.left = '-1000px';
+      document.body.appendChild(tempDiv);
+
+      window.google.accounts.id.renderButton(tempDiv, {
+        theme: 'outline',
+        size: 'large',
+        type: 'standard',
       });
+
+      // Click the rendered Google button
+      setTimeout(() => {
+        const googleBtn = tempDiv.querySelector('div[role="button"]') as HTMLElement;
+        if (googleBtn) {
+          googleBtn.click();
+          // Clean up after a delay
+          setTimeout(() => {
+            document.body.removeChild(tempDiv);
+          }, 1000);
+        }
+      }, 100);
+
     } catch (error) {
       console.error('Google login error:', error);
-      toast.error('Google login failed');
+      toast.error('שגיאה בהתחברות עם Google');
     }
   };
 

@@ -161,6 +161,9 @@ const LoginPage: React.FC = () => {
               </div>
             </div>
 
+            {/* Hidden div for Google button rendering */}
+            <div id="google-signin-button" style={{ display: 'none', width: '100%' }}></div>
+
             <div className="mt-6">
               <button
                 type="button"

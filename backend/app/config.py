@@ -1,6 +1,6 @@
 from pydantic_settings import BaseSettings
-from pydantic import ConfigDict
-from typing import Optional
+from pydantic import ConfigDict, field_validator
+from typing import Optional, Union
 
 
 class Settings(BaseSettings):
@@ -37,11 +37,20 @@ class Settings(BaseSettings):
     stripe_publishable_key: Optional[str] = None
     
     # CORS
-    allowed_origins: list[str] = [
+    allowed_origins: Union[list[str], str] = [
         "http://localhost:3000",
+        "http://127.0.0.1:3000",
         "http://frontend:80",
         "http://localhost:8080"
     ]
+    
+    @field_validator('allowed_origins', mode='before')
+    @classmethod
+    def parse_allowed_origins(cls, v):
+        """Parse allowed_origins from string or list"""
+        if isinstance(v, str):
+            return [origin.strip() for origin in v.split(',')]
+        return v
     
     # Redis
     redis_url: str = "redis://redis:6379"

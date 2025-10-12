@@ -56,6 +56,8 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        - REACT_APP_GOOGLE_CLIENT_ID=14699536724-etdb0dco7r53sepk33p9356aaechv2l8.apps.googleusercontent.com
     container_name: ecommerce_frontend
     user: "0:0"
     ports:
@@ -67,7 +69,6 @@ services:
     environment:
       - REACT_APP_API_URL=http://backend:8000
       - REACT_APP_API_URL_PUBLIC=http://localhost:8000
-      - REACT_APP_GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
 
 volumes:
   postgres_data:
