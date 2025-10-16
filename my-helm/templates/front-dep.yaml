@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-front
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.front.label }}
+  template:
+    metadata:
+      labels: 
+        app: {{ .Values.front.label }}
+    spec:
+      containers:
+        - name: {{ .Values.front.containerName }}
+          image: {{ .Values.front.image.repository }}:{{ .Values.front.image.tag | default .Chart.appVersion }}
+          ports:
+            - name: {{ .Values.front.ports.name }}
+              containerPort: {{ .Values.front.ports.containerPort }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-f-service
+spec:
+  type: NodePort
+  selector:
+    matchLabels:
+      app: {{ .Values.front.label }}
+  ports:
+    - port: {{ .Values.front.svc.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  
+
+
+
