@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: ecommerce-frontend:v4
+        image: 463470983018.dkr.ecr.us-east-1.amazonaws.com/dohelmoto-frontend:latest
         imagePullPolicy: Never
         ports:
         - containerPort: 80
