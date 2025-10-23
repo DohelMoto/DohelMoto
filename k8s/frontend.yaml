@@ -21,9 +21,9 @@ spec:
         - containerPort: 80
         env:
         - name: REACT_APP_API_URL
-          value: "http://backend-service:8000"
+          value: "/api"
         - name: REACT_APP_API_URL_PUBLIC
-          value: "https://api.yourdomain.com"
+          value: "/api"
         - name: REACT_APP_STRIPE_PUBLISHABLE_KEY
           valueFrom:
             secretKeyRef:
