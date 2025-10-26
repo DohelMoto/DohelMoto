@@ -1,23 +1,53 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: redis-pvc
+  namespace: ecommerce
+  labels:
+    app: dohelmoto
+    component: redis
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: local-path
+
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: redis
   namespace: ecommerce
+  labels:
+    app: dohelmoto
+    component: redis
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: redis
+      app: dohelmoto
+      component: redis
   template:
     metadata:
       labels:
-        app: redis
+        app: dohelmoto
+        component: redis
     spec:
       containers:
       - name: redis
         image: redis:7-alpine
         ports:
         - containerPort: 6379
+        command:
+        - redis-server
+        - --appendonly
+        - "yes"
+        - --maxmemory
+        - "256mb"
+        - --maxmemory-policy
+        - "allkeys-lru"
         volumeMounts:
         - name: redis-storage
           mountPath: /data
@@ -28,6 +58,8 @@ spec:
             - ping
           initialDelaySeconds: 30
           periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
         readinessProbe:
           exec:
             command:
@@ -35,13 +67,15 @@ spec:
             - ping
           initialDelaySeconds: 5
           periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
         resources:
           requests:
-            memory: "64Mi"
+            memory: "128Mi"
             cpu: "50m"
           limits:
-            memory: "128Mi"
-            cpu: "100m"
+            memory: "512Mi"
+            cpu: "200m"
       volumes:
       - name: redis-storage
         persistentVolumeClaim:
@@ -53,26 +87,16 @@ kind: Service
 metadata:
   name: redis-service
   namespace: ecommerce
+  labels:
+    app: dohelmoto
+    component: redis
 spec:
   selector:
-    app: redis
+    app: dohelmoto
+    component: redis
   ports:
   - port: 6379
     targetPort: 6379
+    protocol: TCP
+    name: redis
   type: ClusterIP
-
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: redis-pvc
-  namespace: ecommerce
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 5Gi
-
-
-
