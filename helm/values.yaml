@@ -1,0 +1,214 @@
+global:
+  imageRegistry: ""
+  imagePullSecrets: []
+  storageClass: "local-path"
+
+image:
+  registry: 463470983018.dkr.ecr.us-east-1.amazonaws.com
+  pullPolicy: Always
+
+frontend:
+  enabled: true
+  image:
+    repository: dohelmoto-frontend
+    tag: latest
+    pullPolicy: Always
+  replicaCount: 3
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 80
+  resources:
+    limits:
+      cpu: 300m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  env:
+    REACT_APP_API_URL: "/api"
+    REACT_APP_API_URL_PUBLIC: "/api"
+    NODE_ENV: "production"
+
+backend:
+  enabled: true
+  image:
+    repository: dohelmoto-backend
+    tag: latest
+    pullPolicy: Always
+  replicaCount: 3
+  service:
+    type: ClusterIP
+    port: 8000
+    targetPort: 8000
+  resources:
+    limits:
+      cpu: 500m
+      memory: 1Gi
+    requests:
+      cpu: 250m
+      memory: 512Mi
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  env:
+    NODE_ENV: "production"
+    LOG_LEVEL: "info"
+
+postgresql:
+  enabled: true
+  image:
+    repository: postgres
+    tag: "16-alpine"
+    pullPolicy: IfNotPresent
+  replicaCount: 1
+  service:
+    type: ClusterIP
+    port: 5432
+    targetPort: 5432
+  resources:
+    limits:
+      cpu: 500m
+      memory: 1Gi
+    requests:
+      cpu: 100m
+      memory: 256Mi
+  persistence:
+    enabled: true
+    size: 20Gi
+    storageClass: ""
+    accessMode: ReadWriteOnce
+  env:
+    POSTGRES_DB: "ecommerce_db"
+    POSTGRES_USER: "ecommerce_user"
+    PGDATA: "/var/lib/postgresql/data/pgdata"
+
+redis:
+  enabled: true
+  image:
+    repository: redis
+    tag: "7-alpine"
+    pullPolicy: IfNotPresent
+  replicaCount: 1
+  service:
+    type: ClusterIP
+    port: 6379
+    targetPort: 6379
+  resources:
+    limits:
+      cpu: 200m
+      memory: 512Mi
+    requests:
+      cpu: 50m
+      memory: 128Mi
+  persistence:
+    enabled: true
+    size: 10Gi
+    storageClass: ""
+    accessMode: ReadWriteOnce
+  configuration: |
+    maxmemory 256mb
+    maxmemory-policy allkeys-lru
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/cors-allow-origin: "http://localhost:3000,http://localhost:80,http://localhost,http://localhost:30080,https://dohelmoto.com"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-headers: "DNT,X-CustomHeader,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Authorization"
+    nginx.ingress.kubernetes.io/cors-allow-credentials: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+  hosts:
+    - host: dohelmoto.com
+      paths:
+        - path: /api(/|$)(.*)
+          pathType: ImplementationSpecific
+          service:
+            name: backend-service
+            port: 8000
+        - path: /
+          pathType: Prefix
+          service:
+            name: frontend-service
+            port: 80
+  tls: []
+
+service:
+  type: LoadBalancer
+  ports:
+    http: 80
+    https: 443
+
+configMap:
+  data:
+    DATABASE_URL: "postgresql://ecommerce_user:password@postgres-service:5432/ecommerce_db"
+    REDIS_URL: "redis://redis-service:6379"
+    ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:80,http://localhost,http://localhost:30080,http://frontend-service:80,https://dohelmoto.com"
+    AWS_REGION: "us-east-1"
+    ALGORITHM: "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: "30"
+    NODE_ENV: "production"
+    LOG_LEVEL: "info"
+
+secret:
+  data:
+    SECRET_KEY: "eW91ci1zZWNyZXQta2V5LWNoYW5nZS1pbi1wcm9kdWN0aW9u"
+    GOOGLE_CLIENT_ID: "eW91ci1nb29nbGUtY2xpZW50LWlk"
+    GOOGLE_CLIENT_SECRET: "eW91ci1nb29nbGUtY2xpZW50LXNlY3JldA=="
+    AWS_ACCESS_KEY_ID: "eW91ci1hd3MtYWNjZXNzLWtleQ=="
+    AWS_SECRET_ACCESS_KEY: "eW91ci1hd3Mtc2VjcmV0LWtleQ=="
+    AWS_BUCKET_NAME: "eW91ci1zMy1idWNrZXQtbmFtZQ=="
+    OPENAI_API_KEY: "eW91ci1vcGVuYWktYXBpLWtleQ=="
+    STRIPE_SECRET_KEY: "eW91ci1zdHJpcGUtc2VjcmV0LWtleQ=="
+    STRIPE_PUBLISHABLE_KEY: "eW91ci1zdHJpcGUtcHVibGlzaGFibGUta2V5"
+    POSTGRES_PASSWORD: "cGFzc3dvcmQ="
+    REACT_APP_STRIPE_PUBLISHABLE_KEY: "eW91ci1zdHJpcGUtcHVibGlzaGFibGUta2V5"
+
+ecrSecret:
+  enabled: true
+  name: "ecr-registry-secret"
+  server: "463470983018.dkr.ecr.us-east-1.amazonaws.com"
+  username: "AWS"
+  # Password will be set during deployment
+
+healthChecks:
+  enabled: true
+  livenessProbe:
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readinessProbe:
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 3
+
+securityContext:
+  runAsNonRoot: false
+  runAsUser: 0
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+    - ALL

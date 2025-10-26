@@ -1,0 +1,91 @@
+🎉 DohelMoto has been deployed successfully!
+
+📋 Release Information:
+   Name: {{ .Release.Name }}
+   Namespace: {{ include "dohelmoto.namespace" . }}
+   Version: {{ .Chart.Version }}
+
+🔧 Components Deployed:
+{{- if .Values.frontend.enabled }}
+   ✅ Frontend ({{ .Values.frontend.replicaCount }} replicas)
+{{- end }}
+{{- if .Values.backend.enabled }}
+   ✅ Backend ({{ .Values.backend.replicaCount }} replicas)
+{{- end }}
+{{- if .Values.postgresql.enabled }}
+   ✅ PostgreSQL Database
+{{- end }}
+{{- if .Values.redis.enabled }}
+   ✅ Redis Cache
+{{- end }}
+{{- if .Values.ingress.enabled }}
+   ✅ Ingress Controller
+{{- end }}
+
+🌐 Access Information:
+
+{{- if .Values.ingress.enabled }}
+   External Access:
+   {{- range .Values.ingress.hosts }}
+   - URL: http://{{ .host }}
+   {{- end }}
+   {{- if not .Values.ingress.hosts }}
+   - URL: http://localhost (via port forwarding)
+   {{- end }}
+{{- else }}
+   Port Forwarding (recommended for local development):
+   kubectl port-forward service/frontend-service 3000:{{ .Values.frontend.service.port }} -n {{ include "dohelmoto.namespace" . }}
+   kubectl port-forward service/backend-service 8000:{{ .Values.backend.service.port }} -n {{ include "dohelmoto.namespace" . }}
+{{- end }}
+
+📊 Service Endpoints:
+{{- if .Values.frontend.enabled }}
+   Frontend: http://frontend-service.{{ include "dohelmoto.namespace" . }}.svc.cluster.local:{{ .Values.frontend.service.port }}
+{{- end }}
+{{- if .Values.backend.enabled }}
+   Backend API: http://backend-service.{{ include "dohelmoto.namespace" . }}.svc.cluster.local:{{ .Values.backend.service.port }}
+{{- end }}
+{{- if .Values.postgresql.enabled }}
+   PostgreSQL: postgres-service.{{ include "dohelmoto.namespace" . }}.svc.cluster.local:{{ .Values.postgresql.service.port }}
+{{- end }}
+{{- if .Values.redis.enabled }}
+   Redis: redis-service.{{ include "dohelmoto.namespace" . }}.svc.cluster.local:{{ .Values.redis.service.port }}
+{{- end }}
+
+🔍 Useful Commands:
+
+   Check Status:
+   kubectl get pods -n {{ include "dohelmoto.namespace" . }}
+   kubectl get services -n {{ include "dohelmoto.namespace" . }}
+   kubectl get ingress -n {{ include "dohelmoto.namespace" . }}
+
+   View Logs:
+   kubectl logs -f deployment/{{ include "dohelmoto.fullname" . }}-backend -n {{ include "dohelmoto.namespace" . }}
+   kubectl logs -f deployment/{{ include "dohelmoto.fullname" . }}-frontend -n {{ include "dohelmoto.namespace" . }}
+
+   Scale Services:
+   kubectl scale deployment {{ include "dohelmoto.fullname" . }}-backend --replicas=5 -n {{ include "dohelmoto.namespace" . }}
+   kubectl scale deployment {{ include "dohelmoto.fullname" . }}-frontend --replicas=5 -n {{ include "dohelmoto.namespace" . }}
+
+   Health Checks:
+   curl http://localhost:8000/health  # Backend health
+   curl http://localhost:3000         # Frontend
+
+🔐 Security Notes:
+   - Update secrets in values.yaml with your actual credentials
+   - ECR secret needs to be refreshed periodically
+   - Consider implementing network policies for production
+
+📚 Documentation:
+   - Chart: {{ .Chart.Name }}-{{ .Chart.Version }}
+   - Home: {{ .Chart.Home }}
+   - Sources: {{ .Chart.Sources }}
+
+🎯 Next Steps:
+   1. Update secrets with your actual values
+   2. Configure ingress for external access
+   3. Set up monitoring and logging
+   4. Configure backup for PostgreSQL
+   5. Review security settings
+
+Happy shopping with DohelMoto! 🛒✨

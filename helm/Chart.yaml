@@ -1,0 +1,23 @@
+apiVersion: v2
+name: dohelmoto
+description: A modern e-commerce platform with AI-powered shopping assistant
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+home: https://github.com/DohelMoto/DohelMoto
+sources:
+  - https://github.com/DohelMoto/DohelMoto
+maintainers:
+  - name: DohelMoto Team
+    email: team@dohelmoto.com
+keywords:
+  - ecommerce
+  - react
+  - python
+  - postgresql
+  - redis
+  - ai
+  - shopping
+annotations:
+  category: E-commerce
+  licenses: MIT

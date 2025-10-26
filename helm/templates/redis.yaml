@@ -1,0 +1,116 @@
+{{- if .Values.redis.enabled }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "dohelmoto.fullname" . }}-redis-pvc
+  namespace: {{ include "dohelmoto.namespace" . }}
+  labels:
+    {{- include "dohelmoto.labels" . | nindent 4 }}
+    component: redis
+spec:
+  accessModes:
+    - {{ .Values.redis.persistence.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.redis.persistence.size }}
+  {{- if .Values.redis.persistence.storageClass }}
+  storageClassName: {{ .Values.redis.persistence.storageClass }}
+  {{- else if .Values.global.storageClass }}
+  storageClassName: {{ .Values.global.storageClass }}
+  {{- end }}
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "dohelmoto.fullname" . }}-redis
+  namespace: {{ include "dohelmoto.namespace" . }}
+  labels:
+    {{- include "dohelmoto.labels" . | nindent 4 }}
+    component: redis
+spec:
+  replicas: {{ .Values.redis.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "dohelmoto.selectorLabels" . | nindent 6 }}
+      component: redis
+  template:
+    metadata:
+      labels:
+        {{- include "dohelmoto.selectorLabels" . | nindent 8 }}
+        component: redis
+    spec:
+      containers:
+      - name: redis
+        image: {{ include "dohelmoto.redis.image" . }}
+        imagePullPolicy: {{ .Values.redis.image.pullPolicy }}
+        ports:
+        - containerPort: {{ .Values.redis.service.targetPort }}
+          name: redis
+        command:
+        - redis-server
+        - --appendonly
+        - "yes"
+        {{- if .Values.redis.configuration }}
+        - --maxmemory
+        - "256mb"
+        - --maxmemory-policy
+        - "allkeys-lru"
+        {{- end }}
+        volumeMounts:
+        - name: redis-storage
+          mountPath: /data
+        {{- if .Values.healthChecks.enabled }}
+        livenessProbe:
+          exec:
+            command:
+            - redis-cli
+            - ping
+          {{- toYaml .Values.healthChecks.livenessProbe | nindent 10 }}
+        readinessProbe:
+          exec:
+            command:
+            - redis-cli
+            - ping
+          {{- toYaml .Values.healthChecks.readinessProbe | nindent 10 }}
+        {{- end }}
+        resources:
+          {{- toYaml .Values.redis.resources | nindent 10 }}
+      volumes:
+      - name: redis-storage
+        persistentVolumeClaim:
+          claimName: {{ include "dohelmoto.fullname" . }}-redis-pvc
+      {{- with .Values.redis.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.redis.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.redis.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-service
+  namespace: {{ include "dohelmoto.namespace" . }}
+  labels:
+    {{- include "dohelmoto.labels" . | nindent 4 }}
+    component: redis
+spec:
+  selector:
+    {{- include "dohelmoto.selectorLabels" . | nindent 4 }}
+    component: redis
+  ports:
+  - port: {{ .Values.redis.service.port }}
+    targetPort: {{ .Values.redis.service.targetPort }}
+    protocol: TCP
+    name: redis
+  type: {{ .Values.redis.service.type }}
+{{- end }}
