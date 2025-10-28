@@ -155,6 +155,10 @@ metadata:
   labels:
     {{- include "dohelmoto.labels" . | nindent 4 }}
     component: backend
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/path: "/metrics"
+    prometheus.io/port: "8000"
 spec:
   selector:
     {{- include "dohelmoto.selectorLabels" . | nindent 4 }}

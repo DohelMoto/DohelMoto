@@ -23,3 +23,4 @@ google-auth-httplib2==0.1.1
 redis==5.0.1
 celery==5.3.4
 
+prometheus-fastapi-instrumentator

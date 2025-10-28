@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from app.config import settings
+from prometheus_fastapi_instrumentator import Instrumentator
 from app.api import auth, products, cart, chat, orders, upload
 import uvicorn
 
@@ -13,6 +14,9 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc"
 )
+# Enable Prometheus metrics
+Instrumentator().instrument(app).expose(app)
+
 
 # Add CORS middleware
 app.add_middleware(
