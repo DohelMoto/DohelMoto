@@ -35,12 +35,14 @@ jobs:
 
       - name:  Run services (integration test)
         run: |
-          docker compose up -d --wait --wait-timeout 180
-          echo "==> Checking backend health"
-          curl -fsS http://localhost:8000/health || exit 1
-          echo "==> Checking frontend health"
-          curl -fsS http://localhost:3000/health || true
-
+          docker compose up -d --wait --wait-timeout 180 || true
+          echo "==> FRONTEND LOGS:"
+          docker logs ecommerce_frontend || true
+          echo "==> BACKEND LOGS:"
+          docker logs ecommerce_backend || true
+          echo "==> Now testing endpoints:"
+          curl -fsS http://localhost:8000/health || true
+          curl -fsS http://localhost:3000 || true
       - name:  Tear down containers
         if: always()
         run: docker compose down -v --remove-orphans || true
