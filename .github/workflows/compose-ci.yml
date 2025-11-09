@@ -92,7 +92,8 @@ jobs:
         with:
           repository: DohelMoto/DohelMoto-GitOps
           path: gitops
-          token: ${{ secrets.GITHUB_TOKEN }}
+          ssh-key: ${{ secrets.GITOPS_DEPLOY_KEY }}
+          
 
       - name:  Determine environment
         run: |
@@ -104,13 +105,25 @@ jobs:
       - name: Update image tags in values.yaml (frontend + backend)
         run: |
           sed -i "s/tag: .*/tag: ${{ env.IMAGE_TAG }}/" gitops/environments/$ENV/values.yaml
+      
+      
+      - name: Fix Git remote to use SSH
+        working-directory: gitops
+        run: |
+          git remote set-url origin git@github.com:DohelMoto/DohelMoto-GitOps.git
+      
+      
+      - name: Debug remote
+        working-directory: gitops
+        run: git remote -v
+
 
       - name:  Commit and push GitOps update
+        working-directory: gitops
         run: |
-          cd gitops
           git config user.name "github-actions"
           git config user.email "actions@github.com"
           git add .
           git commit -m "Deploy $ENV - Updated image tag to ${{ env.IMAGE_TAG }}" || echo "No changes to commit"
-          git push
+          git push origin HEAD
 
