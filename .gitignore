@@ -2,3 +2,5 @@
 *.env
 **/*.env
 .gitignore
+logs/
+scripts/

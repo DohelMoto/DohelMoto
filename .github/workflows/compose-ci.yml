@@ -2,8 +2,10 @@ name: Compose CI + Push to ECR
 
 on:
   push:
-    branches: [ "main", "dev", "**" ]
+    branches: [ "main", "dev", "staging" ]
   pull_request:
+env:
+  IMAGE_TAG: ${{github.sha}} # tag the images
 
 jobs:
   build-and-push:
@@ -58,7 +60,7 @@ jobs:
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: dohelmoto-backend
-          IMAGE_TAG: latest
+          IMAGE_TAG: ${{ github.sha }}
         run: |
           docker tag dohelmoto-backend:latest $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
@@ -67,7 +69,7 @@ jobs:
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: dohelmoto-frontend
-          IMAGE_TAG: latest
+          IMAGE_TAG: ${{ github.sha }}
         run: |
           docker tag dohelmoto-frontend:latest $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
@@ -80,4 +82,31 @@ jobs:
           aws ecr describe-images --repository-name dohelmoto-backend --region $REGION --output table
           echo "==> Verifying frontend..."
           aws ecr describe-images --repository-name dohelmoto-frontend --region $REGION --output table
+
+      - name: 🧾 Checkout GitOps repo
+        uses: actions/checkout@v4
+        with:
+          repository: DohelMoto/DohelMoto-GitOps
+          path: gitops
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🌍 Determine environment
+        run: |
+          if [[ "${GITHUB_REF_NAME}" == "dev" ]]; then ENV="dev"; fi
+          if [[ "${GITHUB_REF_NAME}" == "staging" ]]; then ENV="staging"; fi
+          if [[ "${GITHUB_REF_NAME}" == "main" ]]; then ENV="prod"; fi
+          echo "ENV=$ENV" >> $GITHUB_ENV
+
+      - name: ✏️ Update image tags in values.yaml (frontend + backend)
+        run: |
+          sed -i "s/tag: .*/tag: ${{ env.IMAGE_TAG }}/" gitops/environments/$ENV/values.yaml
+
+      - name: 💾 Commit and push GitOps update
+        run: |
+          cd gitops
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add .
+          git commit -m "Deploy $ENV - Updated image tag to ${{ env.IMAGE_TAG }}" || echo "No changes to commit"
+          git push
 
