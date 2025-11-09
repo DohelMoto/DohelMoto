@@ -58,6 +58,8 @@ services:
       dockerfile: Dockerfile
       args:
         - REACT_APP_GOOGLE_CLIENT_ID=14699536724-etdb0dco7r53sepk33p9356aaechv2l8.apps.googleusercontent.com
+        - REACT_APP_API_URL=/api
+        - REACT_APP_API_URL_PUBLIC=/api
     container_name: ecommerce_frontend
     user: "0:0"
     ports:

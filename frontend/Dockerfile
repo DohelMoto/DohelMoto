@@ -18,8 +18,11 @@ RUN ls -la src/contexts && ls -la src/contexts/AuthContext* || true
 # Set environment variables for build
 ARG REACT_APP_GOOGLE_CLIENT_ID
 ARG REACT_APP_API_URL_PUBLIC=/api
+ARG REACT_APP_API_URL=/api
 ENV REACT_APP_GOOGLE_CLIENT_ID=$REACT_APP_GOOGLE_CLIENT_ID
 ENV REACT_APP_API_URL_PUBLIC=$REACT_APP_API_URL_PUBLIC
+ENV REACT_APP_API_URL=$REACT_APP_API_URL
+
 
 # Build the app
 RUN npm run build
