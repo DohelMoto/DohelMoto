@@ -93,6 +93,7 @@ jobs:
           repository: DohelMoto/DohelMoto-GitOps
           path: gitops
           ssh-key: ${{ secrets.GITOPS_DEPLOY_KEY }}
+          persist-credentials: false
           
 
       - name:  Determine environment
@@ -106,17 +107,9 @@ jobs:
         run: |
           sed -i "s/tag: .*/tag: ${{ env.IMAGE_TAG }}/" gitops/environments/$ENV/values.yaml
       
-      
-      - name: Fix Git remote to use SSH
-        working-directory: gitops
-        run: |
-          git remote set-url origin git@github.com:DohelMoto/DohelMoto-GitOps.git
-      
-      
       - name: Debug remote
         working-directory: gitops
         run: git remote -v
-
 
       - name:  Commit and push GitOps update
         working-directory: gitops
