@@ -12,10 +12,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 🧾 Checkout repository
+      - name:  Checkout repository
         uses: actions/checkout@v4
 
-      - name: ⚙️ Create backend .env file
+      - name:  Create backend .env file
         run: |
           mkdir -p backend
           {
@@ -29,11 +29,11 @@ jobs:
             echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}"
           } > backend/.env
 
-      - name: 🧱 Build all services (backend + frontend)
+      - name:  Build all services (backend + frontend)
         run: |
-          docker compose build --no-cache
+          REACT_APP_API_URL="/api" NODE_ENV="development" docker compose build --no-cache
 
-      - name: 🧪 Run services (integration test)
+      - name:  Run services (integration test)
         run: |
           docker compose up -d --wait --wait-timeout 180
           echo "==> Checking backend health"
@@ -41,22 +41,22 @@ jobs:
           echo "==> Checking frontend health"
           curl -fsS http://localhost:3000/health || true
 
-      - name: 🧹 Tear down containers
+      - name:  Tear down containers
         if: always()
         run: docker compose down -v --remove-orphans || true
 
-      - name: 🔐 Configure AWS credentials
+      - name:  Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: 🔑 Login to Amazon ECR
+      - name:  Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-      - name: 🚀 Push backend image to ECR
+      - name:  Push backend image to ECR
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: dohelmoto-backend
@@ -65,7 +65,7 @@ jobs:
           docker tag dohelmoto-backend:latest $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
-      - name: 🚀 Push frontend image to ECR
+      - name:  Push frontend image to ECR
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: dohelmoto-frontend
@@ -74,7 +74,7 @@ jobs:
           docker tag dohelmoto-frontend:latest $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
-      - name: 🧾 Verify images in ECR
+      - name:  Verify images in ECR
         env:
           REGION: ${{ secrets.AWS_REGION }}
         run: |
@@ -83,25 +83,25 @@ jobs:
           echo "==> Verifying frontend..."
           aws ecr describe-images --repository-name dohelmoto-frontend --region $REGION --output table
 
-      - name: 🧾 Checkout GitOps repo
+      - name:  Checkout GitOps repo
         uses: actions/checkout@v4
         with:
           repository: DohelMoto/DohelMoto-GitOps
           path: gitops
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: 🌍 Determine environment
+      - name:  Determine environment
         run: |
           if [[ "${GITHUB_REF_NAME}" == "dev" ]]; then ENV="dev"; fi
           if [[ "${GITHUB_REF_NAME}" == "staging" ]]; then ENV="staging"; fi
           if [[ "${GITHUB_REF_NAME}" == "main" ]]; then ENV="prod"; fi
           echo "ENV=$ENV" >> $GITHUB_ENV
 
-      - name: ✏️ Update image tags in values.yaml (frontend + backend)
+      - name: Update image tags in values.yaml (frontend + backend)
         run: |
           sed -i "s/tag: .*/tag: ${{ env.IMAGE_TAG }}/" gitops/environments/$ENV/values.yaml
 
-      - name: 💾 Commit and push GitOps update
+      - name:  Commit and push GitOps update
         run: |
           cd gitops
           git config user.name "github-actions"
