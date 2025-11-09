@@ -93,6 +93,7 @@ jobs:
           repository: DohelMoto/DohelMoto-GitOps
           path: gitops
           token: ${{ secrets.GITOPS_PUSH_TOKEN }}
+
           
 
       - name:  Determine environment
