@@ -4,3 +4,5 @@
 .gitignore
 logs/
 scripts/
+backend/venv/
+frontend/node_modules/
