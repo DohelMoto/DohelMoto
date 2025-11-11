@@ -4,13 +4,13 @@ global:
   storageClass: "local-path"
 
 image:
-  registry: 463470983018.dkr.ecr.us-east-1.amazonaws.com
+  registry: 376129883917.dkr.ecr.us-east-1.amazonaws.com
   pullPolicy: Always
 
 frontend:
   enabled: true
   image:
-    repository: dohelmoto-frontend
+    repository: ecommerce/dohelmoto-frontend
     tag: latest
     pullPolicy: Always
   replicaCount: 3
@@ -42,7 +42,7 @@ frontend:
 backend:
   enabled: true
   image:
-    repository: dohelmoto-backend
+    repository: ecommerce/dohelmoto-backend
     tag: latest
     pullPolicy: Always
   replicaCount: 3
@@ -188,7 +188,7 @@ secret:
 ecrSecret:
   enabled: true
   name: "ecr-registry-secret"
-  server: "463470983018.dkr.ecr.us-east-1.amazonaws.com"
+  server: "376129883917.dkr.ecr.us-east-1.amazonaws.com"
   username: "AWS"
   # Password will be set during deployment
 
