@@ -1,117 +1,136 @@
-name: Compose CI + Push to ECR
+name: Compose CI + Update GitOps
 
 on:
   push:
     branches: [ "main", "dev", "staging" ]
   pull_request:
-permissions: 
-  contents: write
+
+permissions:
+  id-token: write
+  contents: read
+
 env:
-  IMAGE_TAG: ${{github.sha}} # tag the images
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  ECR_ACCOUNT: ${{ secrets.AWS_ACCOUNT_ID }}
+  ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com
+  BACKEND_REPO: ecommerce/dohelmoto-backend
+  FRONTEND_REPO: ecommerce/dohelmoto-frontend
+  IMAGE_TAG: ${{ github.sha }}
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
 
     steps:
-      - name:  Checkout repository
+      - name: Checkout mono-repo
         uses: actions/checkout@v4
 
-      - name:  Create backend .env file
+      - name: Create backend .env
         run: |
           mkdir -p backend
-          {
-            echo "DATABASE_URL=${{ secrets.DATABASE_URL }}"
-            echo "SECRET_KEY=${{ secrets.SECRET_KEY }}"
-            echo "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}"
-            echo "GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}"
-            echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}"
-            echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}"
-            echo "AWS_BUCKET_NAME=${{ secrets.AWS_BUCKET_NAME }}"
-            echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}"
-          } > backend/.env
+          cat > backend/.env <<'EOF'
+          DATABASE_URL=${{ secrets.DATABASE_URL }}
+          SECRET_KEY=${{ secrets.SECRET_KEY }}
+          GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
+          AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_BUCKET_NAME=${{ secrets.AWS_BUCKET_NAME }}
+          OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+          EOF
 
-      - name:  Build all services (backend + frontend)
+      - name: Quick compose smoke test
         run: |
-          REACT_APP_API_URL="/api" NODE_ENV="development" docker compose build --no-cache
-
-      - name:  Run services (integration test)
-        run: |
+          REACT_APP_API_URL="/api" NODE_ENV="development" docker compose build
           docker compose up -d --wait --wait-timeout 180 || true
-          echo "==> FRONTEND LOGS:"
-          docker logs ecommerce_frontend || true
-          echo "==> BACKEND LOGS:"
-          docker logs ecommerce_backend || true
-          echo "==> Now testing endpoints:"
-          curl -fsS http://localhost:8000/health || true
+          echo "==> FRONTEND LOGS:"; docker logs ecommerce_frontend || true
+          echo "==> BACKEND LOGS:";  docker logs ecommerce_backend  || true
+          echo "==> Health checks:"; curl -fsS http://localhost:8000/health || true
           curl -fsS http://localhost:3000 || true
-      - name:  Tear down containers
-        if: always()
-        run: docker compose down -v --remove-orphans || true
+          docker compose down -v --remove-orphans || true
 
-      - name:  Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
         with:
+          aws-region: ${{ env.AWS_REGION }}
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
 
-      - name:  Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
+      - name: Login to ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
 
-      - name:  Push backend image to ECR
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: ecommerce/dohelmoto-backend
-          IMAGE_TAG: ${{ github.sha }}
+      - name: Ensure ECR repositories exist
         run: |
-          docker tag ecommerce/dohelmoto-backend:latest $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          aws ecr describe-repositories --repository-names "$BACKEND_REPO" >/dev/null 2>&1 || \
+            aws ecr create-repository --repository-name "$BACKEND_REPO" >/dev/null
+          aws ecr describe-repositories --repository-names "$FRONTEND_REPO" >/dev/null 2>&1 || \
+            aws ecr create-repository --repository-name "$FRONTEND_REPO" >/dev/null
 
-      - name:  Push frontend image to ECR
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: ecommerce/dohelmoto-frontend
-          IMAGE_TAG: ${{ github.sha }}
+      - name: Build & push backend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: true
+          tags: |
+            ${{ env.ECR_REGISTRY }}/${{ env.BACKEND_REPO }}:${{ env.IMAGE_TAG }}
+            ${{ env.ECR_REGISTRY }}/${{ env.BACKEND_REPO }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build & push frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: true
+          build-args: |
+            REACT_APP_API_URL=/api
+            NODE_ENV=production
+          tags: |
+            ${{ env.ECR_REGISTRY }}/${{ env.FRONTEND_REPO }}:${{ env.IMAGE_TAG }}
+            ${{ env.ECR_REGISTRY }}/${{ env.FRONTEND_REPO }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Verify images exist in ECR
         run: |
-          docker tag dohelmoto-frontend:latest $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          aws ecr describe-images --repository-name "$BACKEND_REPO"  --image-ids imageTag=${IMAGE_TAG} --region "$AWS_REGION" --output table
+          aws ecr describe-images --repository-name "$FRONTEND_REPO" --image-ids imageTag=${IMAGE_TAG} --region "$AWS_REGION" --output table
 
-      - name:  Verify images in ECR
-        env:
-          REGION: ${{ secrets.AWS_REGION }}
+      - name: Determine environment
         run: |
-          aws ecr describe-images --repository-name dohelmoto-backend --region $REGION --output table
-          aws ecr describe-images --repository-name dohelmoto-frontend --region $REGION --output table
+          case "${GITHUB_REF_NAME}" in
+            dev)     echo "ENV=dev"     >> $GITHUB_ENV ;;
+            staging) echo "ENV=staging" >> $GITHUB_ENV ;;
+            main)    echo "ENV=prod"    >> $GITHUB_ENV ;;
+            *) echo "Unsupported branch ${GITHUB_REF_NAME}"; exit 1 ;;
+          esac
 
-      - name:  Checkout GitOps repo
+      - name: Checkout GitOps repo
         uses: actions/checkout@v4
         with:
           repository: DohelMoto/DohelMoto-GitOps
           path: gitops
           token: ${{ secrets.GITOPS_PUSH_TOKEN }}
 
-          
+      - name: Install yq
+        run: sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 && sudo chmod +x /usr/local/bin/yq
 
-      - name:  Determine environment
+      - name: Update image tags in GitOps values
         run: |
-          if [[ "${GITHUB_REF_NAME}" == "dev" ]]; then ENV="dev"; fi
-          if [[ "${GITHUB_REF_NAME}" == "staging" ]]; then ENV="staging"; fi
-          if [[ "${GITHUB_REF_NAME}" == "main" ]]; then ENV="prod"; fi
-          echo "ENV=$ENV" >> $GITHUB_ENV
+          set -e
+          test -n "${ENV:-}" || { echo "ENV not set"; exit 1; }
+          yq -i '.images.backend.tag  = env(IMAGE_TAG)'  gitops/environments/$ENV/values.yaml
+          yq -i '.images.frontend.tag = env(IMAGE_TAG)'  gitops/environments/$ENV/values.yaml
 
-      - name: Update image tags in values.yaml (frontend + backend)
-        run: |
-          sed -i "s/tag: .*/tag: ${{ env.IMAGE_TAG }}/" gitops/environments/$ENV/values.yaml
-      
-
-      - name:  Commit and push GitOps update
+      - name: Commit & push GitOps update
         working-directory: gitops
         run: |
-          git config user.name "github-actions"
+          git config user.name  "github-actions"
           git config user.email "actions@github.com"
           git add .
-          git commit -m "Deploy $ENV - Updated image tag to ${{ env.IMAGE_TAG }}" || echo "No changes to commit"
+          git commit -m "Deploy $ENV - image tag $IMAGE_TAG" || echo "No changes to commit"
           git push origin HEAD
 
