@@ -310,5 +310,3 @@ For support, email support@eshop.com or join our Slack channel.
 ---
 
 Built with ❤️ using FastAPI, React, and modern web technologies.
-
-trigger

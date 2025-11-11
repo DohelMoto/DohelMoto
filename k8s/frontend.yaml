@@ -22,7 +22,7 @@ spec:
       - name: ecr-registry-secret
       containers:
       - name: frontend
-        image: 463470983018.dkr.ecr.us-east-1.amazonaws.com/dohelmoto-frontend:latest
+        image: 376129883917.dkr.ecr.us-east-1.amazonaws.com/ecommerce/dohelmoto-frontend
         imagePullPolicy: Always
         ports:
         - containerPort: 80

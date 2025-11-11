@@ -22,17 +22,17 @@ spec:
       - name: ecr-registry-secret
       containers:
       - name: backend
-        image: 463470983018.dkr.ecr.us-east-1.amazonaws.com/dohelmoto-backend:latest
+        image: 376129883917.dkr.ecr.us-east-1.amazonaws.com/ecommerce/dohelmoto-backend:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 8000
           name: http
         env:
-        # Database configuration
+        # Database configuration (moved to Secret for security)
         - name: DATABASE_URL
           valueFrom:
-            configMapKeyRef:
-              name: ecommerce-config
+            secretKeyRef:
+              name: ecommerce-secrets
               key: DATABASE_URL
         # Redis configuration
         - name: REDIS_URL
