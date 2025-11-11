@@ -67,7 +67,7 @@ jobs:
           file: ./backend/Dockerfile
           push: true
           tags: |
-            376129883917.dkr.ecr.us-east-1.amazonaws.com/ecommerce/dohelmoto-backend-${{ env.sha }}
+            376129883917.dkr.ecr.us-east-1.amazonaws.com/ecommerce/dohelmoto-backend:${{ env.sha }}
 
       - name: Build and Push Frontend Docker Image
         uses: docker/build-push-action@v5
@@ -76,7 +76,7 @@ jobs:
           file: ./frontend/Dockerfile
           push: true
           tags: |
-            376129883917.dkr.ecr.us-east-1.amazonaws.com/ecommerce/dohelmoto-backend-${{ env.sha }}
+            376129883917.dkr.ecr.us-east-1.amazonaws.com/ecommerce/dohelmoto-backend:${{ env.sha }}
 
       - name: Determine environment
         run: |
