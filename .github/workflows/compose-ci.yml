@@ -60,43 +60,23 @@ jobs:
         id: ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Ensure ECR repositories exist
-        run: |
-          aws ecr describe-repositories --repository-names "$BACKEND_REPO" >/dev/null 2>&1 || \
-            aws ecr create-repository --repository-name "$BACKEND_REPO" >/dev/null
-          aws ecr describe-repositories --repository-names "$FRONTEND_REPO" >/dev/null 2>&1 || \
-            aws ecr create-repository --repository-name "$FRONTEND_REPO" >/dev/null
+      - name: Build and Push Backend Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: true
+          tags: |
+            376129883917.dkr.ecr.us-east-1.amazonaws.com/ecommerce/dohelmoto-backend:${{ env.sha }}
 
-      - name: Build backend image
-        run: |
-          docker build \
-            -t $ECR_REGISTRY/$BACKEND_REPO:${IMAGE_TAG} \
-            -t $ECR_REGISTRY/$BACKEND_REPO:latest \
-            -f backend/Dockerfile backend
-
-      - name: Push backend image
-        run: |
-          docker push $ECR_REGISTRY/$BACKEND_REPO:${IMAGE_TAG}
-          docker push $ECR_REGISTRY/$BACKEND_REPO:latest
-
-      - name: Build frontend image
-        run: |
-          docker build \
-            --build-arg REACT_APP_API_URL=/api \
-            --build-arg NODE_ENV=production \
-            -t $ECR_REGISTRY/$FRONTEND_REPO:${IMAGE_TAG} \
-            -t $ECR_REGISTRY/$FRONTEND_REPO:latest \
-            -f frontend/Dockerfile frontend
-
-      - name: Push frontend image
-        run: |
-          docker push $ECR_REGISTRY/$FRONTEND_REPO:${IMAGE_TAG}
-          docker push $ECR_REGISTRY/$FRONTEND_REPO:latest
-
-      - name: Verify images exist in ECR
-        run: |
-          aws ecr describe-images --repository-name "$BACKEND_REPO"  --image-ids imageTag=${IMAGE_TAG} --region "$AWS_REGION" --output table
-          aws ecr describe-images --repository-name "$FRONTEND_REPO" --image-ids imageTag=${IMAGE_TAG} --region "$AWS_REGION" --output table
+      - name: Build and Push Frontend Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: true
+          tags: |
+            376129883917.dkr.ecr.us-east-1.amazonaws.com/ecommerce/dohelmoto-backend:${{ env.sha }}
 
       - name: Determine environment
         run: |
