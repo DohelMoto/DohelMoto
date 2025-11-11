@@ -63,16 +63,16 @@ jobs:
       - name:  Push backend image to ECR
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: dohelmoto-backend
+          ECR_REPOSITORY: ecommerce/dohelmoto-backend
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker tag dohelmoto-backend:latest $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker tag ecommerce/dohelmoto-backend:latest $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
       - name:  Push frontend image to ECR
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: dohelmoto-frontend
+          ECR_REPOSITORY: ecommerce/dohelmoto-frontend
           IMAGE_TAG: ${{ github.sha }}
         run: |
           docker tag dohelmoto-frontend:latest $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
@@ -82,9 +82,7 @@ jobs:
         env:
           REGION: ${{ secrets.AWS_REGION }}
         run: |
-          echo "==> Verifying backend..."
           aws ecr describe-images --repository-name dohelmoto-backend --region $REGION --output table
-          echo "==> Verifying frontend..."
           aws ecr describe-images --repository-name dohelmoto-frontend --region $REGION --output table
 
       - name:  Checkout GitOps repo
