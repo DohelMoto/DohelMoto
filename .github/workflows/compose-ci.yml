@@ -49,14 +49,14 @@ jobs:
           curl -fsS http://localhost:3000 || true
           docker compose down -v --remove-orphans || true
 
-      - name: Configure AWS credentials (OIDC)
+      - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ env.AWS_REGION }}
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
-      - name: Login to ECR
+      - name: Login to Amazon ECR
         id: ecr
         uses: aws-actions/amazon-ecr-login@v2
 
@@ -67,32 +67,31 @@ jobs:
           aws ecr describe-repositories --repository-names "$FRONTEND_REPO" >/dev/null 2>&1 || \
             aws ecr create-repository --repository-name "$FRONTEND_REPO" >/dev/null
 
-      - name: Build & push backend
-        uses: docker/build-push-action@v6
-        with:
-          context: ./backend
-          file: ./backend/Dockerfile
-          push: true
-          tags: |
-            ${{ env.ECR_REGISTRY }}/${{ env.BACKEND_REPO }}:${{ env.IMAGE_TAG }}
-            ${{ env.ECR_REGISTRY }}/${{ env.BACKEND_REPO }}:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+      - name: Build backend image
+        run: |
+          docker build \
+            -t $ECR_REGISTRY/$BACKEND_REPO:${IMAGE_TAG} \
+            -t $ECR_REGISTRY/$BACKEND_REPO:latest \
+            -f backend/Dockerfile backend
 
-      - name: Build & push frontend
-        uses: docker/build-push-action@v6
-        with:
-          context: ./frontend
-          file: ./frontend/Dockerfile
-          push: true
-          build-args: |
-            REACT_APP_API_URL=/api
-            NODE_ENV=production
-          tags: |
-            ${{ env.ECR_REGISTRY }}/${{ env.FRONTEND_REPO }}:${{ env.IMAGE_TAG }}
-            ${{ env.ECR_REGISTRY }}/${{ env.FRONTEND_REPO }}:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+      - name: Push backend image
+        run: |
+          docker push $ECR_REGISTRY/$BACKEND_REPO:${IMAGE_TAG}
+          docker push $ECR_REGISTRY/$BACKEND_REPO:latest
+
+      - name: Build frontend image
+        run: |
+          docker build \
+            --build-arg REACT_APP_API_URL=/api \
+            --build-arg NODE_ENV=production \
+            -t $ECR_REGISTRY/$FRONTEND_REPO:${IMAGE_TAG} \
+            -t $ECR_REGISTRY/$FRONTEND_REPO:latest \
+            -f frontend/Dockerfile frontend
+
+      - name: Push frontend image
+        run: |
+          docker push $ECR_REGISTRY/$FRONTEND_REPO:${IMAGE_TAG}
+          docker push $ECR_REGISTRY/$FRONTEND_REPO:latest
 
       - name: Verify images exist in ECR
         run: |
