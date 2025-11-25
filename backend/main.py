@@ -33,13 +33,13 @@ app.add_middleware(
     allowed_hosts=["*"]  # In production, specify exact hosts
 )
 
-# Include routers
-app.include_router(auth.router)
-app.include_router(products.router)
-app.include_router(cart.router)
-app.include_router(chat.router)
-app.include_router(orders.router)
-app.include_router(upload.router)
+# Include routers with /api prefix
+app.include_router(auth.router, prefix="/api")
+app.include_router(products.router, prefix="/api")
+app.include_router(cart.router, prefix="/api")
+app.include_router(chat.router, prefix="/api")
+app.include_router(orders.router, prefix="/api")
+app.include_router(upload.router, prefix="/api")
 
 @app.get("/")
 async def root():
@@ -53,6 +53,14 @@ async def root():
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
+    return {
+        "status": "healthy",
+        "message": "API is running"
+    }
+
+@app.get("/api/health")
+async def api_health_check():
+    """API health check endpoint"""
     return {
         "status": "healthy",
         "message": "API is running"
