@@ -101,8 +101,8 @@ jobs:
         run: |
           set -e
           test -n "${ENV:-}" || { echo "ENV not set"; exit 1; }
-          yq -i '.images.backend.tag  = env(IMAGE_TAG)'  gitops/environments/$ENV/values.yaml
-          yq -i '.images.frontend.tag = env(IMAGE_TAG)'  gitops/environments/$ENV/values.yaml
+          yq -i '.backend.image.tag  = env(IMAGE_TAG)'  gitops/environments/$ENV/values.yaml
+          yq -i '.frontend.image.tag = env(IMAGE_TAG)'  gitops/environments/$ENV/values.yaml
 
       - name: Commit & push GitOps update
         working-directory: gitops

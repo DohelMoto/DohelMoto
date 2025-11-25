@@ -12,7 +12,7 @@ spec:
   resources:
     requests:
       storage: 20Gi
-  storageClassName: local-path
+  storageClassName: gp3
 
 ---
 apiVersion: v1

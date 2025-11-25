@@ -131,7 +131,7 @@ spec:
         - name: POSTGRES_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: {{ include "dohelmoto.fullname" . }}-secrets
+              name: ecommerce-secrets
               key: POSTGRES_PASSWORD
         volumeMounts:
         - name: postgres-storage

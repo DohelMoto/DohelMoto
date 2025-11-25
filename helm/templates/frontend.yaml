@@ -39,7 +39,7 @@ spec:
         - name: REACT_APP_STRIPE_PUBLISHABLE_KEY
           valueFrom:
             secretKeyRef:
-              name: {{ include "dohelmoto.fullname" . }}-secrets
+              name: ecommerce-secrets
               key: REACT_APP_STRIPE_PUBLISHABLE_KEY
         {{- if .Values.healthChecks.enabled }}
         livenessProbe:

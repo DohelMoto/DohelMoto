@@ -73,47 +73,47 @@ spec:
         - name: SECRET_KEY
           valueFrom:
             secretKeyRef:
-              name: {{ include "dohelmoto.fullname" . }}-secrets
+              name: ecommerce-secrets
               key: SECRET_KEY
         - name: GOOGLE_CLIENT_ID
           valueFrom:
             secretKeyRef:
-              name: {{ include "dohelmoto.fullname" . }}-secrets
+              name: ecommerce-secrets
               key: GOOGLE_CLIENT_ID
         - name: GOOGLE_CLIENT_SECRET
           valueFrom:
             secretKeyRef:
-              name: {{ include "dohelmoto.fullname" . }}-secrets
+              name: ecommerce-secrets
               key: GOOGLE_CLIENT_SECRET
         - name: AWS_ACCESS_KEY_ID
           valueFrom:
             secretKeyRef:
-              name: {{ include "dohelmoto.fullname" . }}-secrets
+              name: ecommerce-secrets
               key: AWS_ACCESS_KEY_ID
         - name: AWS_SECRET_ACCESS_KEY
           valueFrom:
             secretKeyRef:
-              name: {{ include "dohelmoto.fullname" . }}-secrets
+              name: ecommerce-secrets
               key: AWS_SECRET_ACCESS_KEY
         - name: AWS_BUCKET_NAME
           valueFrom:
             secretKeyRef:
-              name: {{ include "dohelmoto.fullname" . }}-secrets
+              name: ecommerce-secrets
               key: AWS_BUCKET_NAME
         - name: OPENAI_API_KEY
           valueFrom:
             secretKeyRef:
-              name: {{ include "dohelmoto.fullname" . }}-secrets
+              name: ecommerce-secrets
               key: OPENAI_API_KEY
         - name: STRIPE_SECRET_KEY
           valueFrom:
             secretKeyRef:
-              name: {{ include "dohelmoto.fullname" . }}-secrets
+              name: ecommerce-secrets
               key: STRIPE_SECRET_KEY
         - name: STRIPE_PUBLISHABLE_KEY
           valueFrom:
             secretKeyRef:
-              name: {{ include "dohelmoto.fullname" . }}-secrets
+              name: ecommerce-secrets
               key: STRIPE_PUBLISHABLE_KEY
         {{- if .Values.healthChecks.enabled }}
         livenessProbe:

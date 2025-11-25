@@ -7,7 +7,7 @@ metadata:
     app: dohelmoto
     component: frontend
 spec:
-  replicas: 3
+  replicas: 1
   selector:
     matchLabels:
       app: dohelmoto
@@ -97,7 +97,7 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: frontend
-  minReplicas: 3
+  minReplicas: 1
   maxReplicas: 10
   metrics:
   - type: Resource
