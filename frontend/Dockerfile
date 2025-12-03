@@ -24,8 +24,8 @@ ENV REACT_APP_API_URL_PUBLIC=$REACT_APP_API_URL_PUBLIC
 ENV REACT_APP_API_URL=$REACT_APP_API_URL
 
 
-# Build the app
-RUN npm run build
+# Build the app with increased memory limit
+RUN NODE_OPTIONS="--max-old-space-size=1536" npm run build
 
 # Production stage with Nginx
 FROM nginx:1.27-alpine
