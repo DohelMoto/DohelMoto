@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS users (
     google_id VARCHAR(255) UNIQUE,
     is_active BOOLEAN DEFAULT TRUE,
     is_verified BOOLEAN DEFAULT FALSE,
+    role VARCHAR(20) DEFAULT 'user',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -20,7 +21,7 @@ CREATE TABLE IF NOT EXISTS users (
 -- Create categories table
 CREATE TABLE IF NOT EXISTS categories (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    name VARCHAR(100) NOT NULL,
+    name VARCHAR(100) NOT NULL UNIQUE,
     description TEXT,
     image_url TEXT,
     is_active BOOLEAN DEFAULT TRUE,
@@ -42,6 +43,13 @@ CREATE TABLE IF NOT EXISTS products (
     is_featured BOOLEAN DEFAULT FALSE,
     rating DECIMAL(3,2) DEFAULT 0.0,
     review_count INTEGER DEFAULT 0,
+    sku VARCHAR(100) UNIQUE,
+    brand VARCHAR(100),
+    part_number VARCHAR(100),
+    compatibility JSONB,
+    weight DECIMAL(8,2),
+    dimensions JSONB,
+    warranty VARCHAR(50),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -110,6 +118,8 @@ CREATE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id);
 CREATE INDEX IF NOT EXISTS idx_products_category_id ON products(category_id);
 CREATE INDEX IF NOT EXISTS idx_products_is_active ON products(is_active);
 CREATE INDEX IF NOT EXISTS idx_products_is_featured ON products(is_featured);
+CREATE INDEX IF NOT EXISTS idx_products_sku ON products(sku);
+CREATE INDEX IF NOT EXISTS idx_products_brand ON products(brand);
 CREATE INDEX IF NOT EXISTS idx_cart_items_user_id ON cart_items(user_id);
 CREATE INDEX IF NOT EXISTS idx_orders_user_id ON orders(user_id);
 CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
@@ -117,37 +127,60 @@ CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON order_items(order_id);
 CREATE INDEX IF NOT EXISTS idx_chat_messages_user_id ON chat_messages(user_id);
 CREATE INDEX IF NOT EXISTS idx_reviews_product_id ON reviews(product_id);
 
--- Insert sample categories
-INSERT INTO categories (name, description, image_url) VALUES
-('Engine Parts', 'Engine components and accessories for tractors and off-road vehicles', 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=400'),
-('Hydraulic Systems', 'Hydraulic pumps, cylinders, and system components', 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=400'),
-('Transmission', 'Transmission parts and drivetrain components', 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=400'),
-('Tires & Wheels', 'Tractor tires, rims, and wheel components', 'https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=400'),
-('Attachments', 'Tractor attachments and implements', 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=400');
+-- Insert admin user (password: admin123 - CHANGE IN PRODUCTION!)
+-- Password hash generated with bcrypt for 'admin123'
+INSERT INTO users (email, username, password_hash, full_name, role, is_active, is_verified) VALUES
+('admin@dohelmoto.com', 'admin', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5aeJFcA5yw.yS', 'Admin User', 'admin', true, true)
+ON CONFLICT (email) DO NOTHING;
 
--- Insert sample products
-INSERT INTO products (name, description, price, category_id, image_urls, stock_quantity, is_featured, rating, review_count) 
+-- Insert sample categories for off-road parts
+INSERT INTO categories (name, description, image_url) VALUES
+('UTV Parts', 'Parts and accessories for UTV vehicles like Maverick X3, RZR', 'https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=400'),
+('Chassis & Suspension', 'A-Arms, shocks, sway bars and suspension components', 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=400'),
+('Wheels & Tires', 'Off-road wheels and tires for extreme terrain', 'https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=400'),
+('Lights & Switches', 'LED lights, light bars, and electrical switches', 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=400'),
+('Winches', 'Heavy-duty winches and recovery equipment', 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=400'),
+('Safety & Helmets', 'Helmets, HANS devices, and safety equipment', 'https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=400'),
+('Radio & Intercom', 'Communication systems for off-road vehicles', 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=400'),
+('ATV Parts', 'Parts and accessories for ATV vehicles', 'https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=400')
+ON CONFLICT (name) DO NOTHING;
+
+-- Insert sample products for off-road parts
+INSERT INTO products (name, description, price, discount_price, category_id, sku, brand, part_number, compatibility, stock_quantity, is_featured, rating, review_count, image_urls, weight, warranty) 
 SELECT 
     p.name,
     p.description,
     p.price,
+    p.discount_price,
     c.id,
-    p.image_urls,
+    p.sku,
+    p.brand,
+    p.part_number,
+    p.compatibility,
     p.stock_quantity,
     p.is_featured,
     p.rating,
-    p.review_count
+    p.review_count,
+    p.image_urls,
+    p.weight,
+    p.warranty
 FROM (VALUES
-    ('Tractor Hydraulic Pump', 'High-pressure hydraulic pump for tractors and construction equipment', 1299.99, 'Hydraulic Systems', ARRAY['https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=400'], 15, true, 4.8, 25),
-    ('Heavy Duty Tractor Tires', 'Premium agricultural tires for all terrain conditions', 899.99, 'Tires & Wheels', ARRAY['https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=400'], 8, true, 4.9, 18),
-    ('Tractor Engine Filter Set', 'Complete engine filter kit for diesel tractors', 149.99, 'Engine Parts', ARRAY['https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=400'], 25, false, 4.5, 42),
-    ('Hydraulic Cylinder', 'Heavy-duty hydraulic cylinder for loader attachments', 799.99, 'Hydraulic Systems', ARRAY['https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=400'], 12, true, 4.6, 31),
-    ('Tractor Transmission Kit', 'Complete transmission rebuild kit', 2499.99, 'Transmission', ARRAY['https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=400'], 5, true, 4.7, 12),
-    ('Tractor Seat', 'Comfortable suspension seat for long hours', 299.99, 'Engine Parts', ARRAY['https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=400'], 20, false, 4.4, 28),
-    ('Tractor Blade Attachment', 'Heavy-duty blade for grading and leveling', 1299.99, 'Attachments', ARRAY['https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=400'], 6, false, 4.2, 15),
-    ('Tractor Radiator', 'High-capacity radiator for cooling systems', 399.99, 'Engine Parts', ARRAY['https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=400'], 18, false, 4.6, 22),
-    ('Tractor PTO Shaft', 'Power take-off shaft for implements', 199.99, 'Transmission', ARRAY['https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=400'], 30, false, 4.8, 35)
-) AS p(name, description, price, category_name, image_urls, stock_quantity, is_featured, rating, review_count)
+    ('Assault Industries High-Clearance A-Arms', 'Heavy-duty boxed A-arms for Maverick X3 with increased ground clearance and reinforced construction', 1899.99, 1799.99, 'Chassis & Suspension', 'AI-HCAA-X3', 'Assault Industries', 'AI-100250', '{"vehicles": ["Maverick X3 64\"", "Maverick X3 72\"", "Maverick X3 MAX"]}', 15, true, 4.9, 45, ARRAY['https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=400'], 25.5, '1 Year'),
+    ('SuperATV 32" Off-Road Tires', 'All-terrain 32-inch tires with aggressive 8-ply tread pattern for maximum traction', 899.99, NULL, 'Wheels & Tires', 'SATV-T32-AT', 'SuperATV', 'SATV-TR-1232', '{"vehicles": ["Maverick X3", "RZR XP 1000", "RZR Pro XP", "Universal"]}', 20, true, 4.8, 67, ARRAY['https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=400'], 18.5, '1 Year'),
+    ('Hess Motorsports Steering Rack Support', 'Reinforced steering rack brace for Maverick X3 to eliminate bump steer', 299.99, NULL, 'Chassis & Suspension', 'HMS-SRS-X3', 'Hess Motorsports', 'HMS-01234', '{"vehicles": ["Maverick X3 64\"", "Maverick X3 72\""]}', 30, false, 4.7, 89, ARRAY['https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=400'], 3.2, '1 Year'),
+    ('Baja Designs 50" LED Light Bar', 'High-output 50-inch LED light bar with combo beam pattern - 26,350 lumens', 1299.99, 1199.99, 'Lights & Switches', 'BD-LB50-C', 'Baja Designs', 'BD-45-7850', '{"vehicles": ["Universal fit"]}', 12, true, 5.0, 123, ARRAY['https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=400'], 8.7, 'Limited Lifetime'),
+    ('Warn VRX 4500 Winch', 'Synthetic rope winch with 4500 lb capacity and wireless remote', 749.99, NULL, 'Winches', 'WARN-VRX45', 'Warn', 'WARN-101045', '{"vehicles": ["Universal fit - UTV/ATV"]}', 8, true, 4.8, 156, ARRAY['https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=400'], 15.8, 'Limited Lifetime'),
+    ('Bell MX-9 Adventure Helmet', 'DOT approved off-road helmet with MIPS technology and adjustable visor', 399.99, 349.99, 'Safety & Helmets', 'BELL-MX9-ADV', 'Bell', 'BELL-7091826', '{"vehicles": ["Universal fit"]}', 25, false, 4.6, 234, ARRAY['https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=400'], 1.6, '5 Years'),
+    ('Rugged Radio M1 Intercom System', 'Two-place intercom with VOX, music input and waterproof design', 499.99, NULL, 'Radio & Intercom', 'RR-M1-2P', 'Rugged Radio', 'RR-M12P', '{"vehicles": ["Universal fit - UTV"]}', 18, true, 4.9, 78, ARRAY['https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=400'], 1.2, '2 Years'),
+    ('Shock Therapy Bump Stop Kit', 'Heavy-duty bump stop kit for Maverick X3 with extended travel', 159.99, NULL, 'Chassis & Suspension', 'ST-BSK-X3', 'Shock Therapy', 'ST-99456', '{"vehicles": ["Maverick X3"]}', 40, false, 4.7, 52, ARRAY['https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=400'], 2.1, '1 Year'),
+    ('Pro Armor Nerf Bars', 'Heavy-duty aluminum nerf bars with integrated foot pegs for Maverick X3', 599.99, 549.99, 'UTV Parts', 'PA-NB-X3', 'Pro Armor', 'PA-456789', '{"vehicles": ["Maverick X3 64\"", "Maverick X3 72\""]}', 14, true, 4.8, 93, ARRAY['https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=400'], 18.0, '1 Year'),
+    ('Rhino 2.0 Axles', 'Heavy-duty chromoly axles for Maverick X3 with 33" tires', 899.99, 849.99, 'UTV Parts', 'RHI-AXL-X3', 'Rhino', 'RHI-RHINO20', '{"vehicles": ["Maverick X3 72\""]}', 10, true, 4.9, 67, ARRAY['https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=400'], 12.5, '18 Months'),
+    ('SuperATV Portal Gear Lift', '6-inch portal gear lift for extreme ground clearance on RZR', 3499.99, NULL, 'Chassis & Suspension', 'SATV-PG6-RZR', 'SuperATV', 'SATV-PG-8899', '{"vehicles": ["RZR XP 1000", "RZR XP Turbo"]}', 4, true, 5.0, 28, ARRAY['https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=400'], 45.0, '1 Year'),
+    ('GBoost Turbo Kit', 'Complete turbo kit for Maverick X3 172hp - adds 50+ hp', 6999.99, NULL, 'UTV Parts', 'GB-TK-X3', 'GBoost', 'GB-172TK', '{"vehicles": ["Maverick X3 Turbo RR"]}', 3, true, 4.8, 15, ARRAY['https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=400'], 28.0, '1 Year'),
+    ('Kicker 6.5" Marine Speakers', 'Water-resistant 6.5-inch speakers for UTV - 150W peak', 249.99, 229.99, 'Radio & Intercom', 'KK-MS65', 'Kicker', 'KK-43KM654L', '{"vehicles": ["Universal fit"]}', 35, false, 4.6, 145, ARRAY['https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=400'], 3.5, '2 Years'),
+    ('PRP Seats - GT/SE Suspension', 'Comfortable suspension seats with 5-point harness for UTV', 899.99, 849.99, 'UTV Parts', 'PRP-GTSE', 'PRP Seats', 'PRP-B1601', '{"vehicles": ["Universal fit - UTV"]}', 12, true, 4.9, 187, ARRAY['https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=400'], 16.0, '5 Years'),
+    ('Tusk Terrabite Tires 29"', '8-ply radial tires for ATV with excellent traction', 599.99, NULL, 'Wheels & Tires', 'TUSK-TB29', 'Tusk', 'TUSK-1441560003', '{"vehicles": ["ATV - Universal fit"]}', 22, false, 4.5, 98, ARRAY['https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=400'], 15.0, '1 Year')
+) AS p(name, description, price, discount_price, category_name, sku, brand, part_number, compatibility, stock_quantity, is_featured, rating, review_count, image_urls, weight, warranty)
 JOIN categories c ON c.name = p.category_name;
 
 -- Create function to update updated_at timestamp

@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from app.config import settings
 from prometheus_fastapi_instrumentator import Instrumentator
-from app.api import auth, products, cart, chat, orders, upload
+from app.api import auth, products, cart, chat, orders, upload, categories
 import uvicorn
 
 # Create FastAPI app
@@ -36,6 +36,7 @@ app.add_middleware(
 # Include routers with /api prefix
 app.include_router(auth.router, prefix="/api")
 app.include_router(products.router, prefix="/api")
+app.include_router(categories.router, prefix="/api")
 app.include_router(cart.router, prefix="/api")
 app.include_router(chat.router, prefix="/api")
 app.include_router(orders.router, prefix="/api")

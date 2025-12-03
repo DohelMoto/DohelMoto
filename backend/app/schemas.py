@@ -27,6 +27,7 @@ class UserResponse(UserBase):
     is_active: bool
     is_verified: bool
     is_google_user: bool
+    role: str = "user"
     created_at: datetime
     
     class Config:
@@ -74,6 +75,13 @@ class CategoryResponse(CategoryBase):
         from_attributes = True
 
 
+class CategoryUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    image_url: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
 # Product Schemas
 class ProductBase(BaseModel):
     name: str
@@ -85,6 +93,13 @@ class ProductBase(BaseModel):
     stock_quantity: int = 0
     is_active: bool = True
     is_featured: bool = False
+    sku: Optional[str] = None
+    brand: Optional[str] = None
+    part_number: Optional[str] = None
+    compatibility: Optional[dict] = None  # Compatible vehicles/models
+    weight: Optional[Decimal] = None
+    dimensions: Optional[dict] = None  # {"length": 10, "width": 5, "height": 3}
+    warranty: Optional[str] = None
 
 
 class ProductCreate(ProductBase):
@@ -96,6 +111,7 @@ class ProductResponse(ProductBase):
     rating: float
     review_count: int
     created_at: datetime
+    updated_at: datetime
     category: Optional[CategoryResponse] = None
     
     class Config:
@@ -112,6 +128,13 @@ class ProductUpdate(BaseModel):
     stock_quantity: Optional[int] = None
     is_active: Optional[bool] = None
     is_featured: Optional[bool] = None
+    sku: Optional[str] = None
+    brand: Optional[str] = None
+    part_number: Optional[str] = None
+    compatibility: Optional[dict] = None
+    weight: Optional[Decimal] = None
+    dimensions: Optional[dict] = None
+    warranty: Optional[str] = None
 
 
 # Cart Schemas

@@ -13,6 +13,7 @@ import CartPage from './pages/CartPage.tsx';
 import CheckoutPage from './pages/CheckoutPage.tsx';
 import ProfilePage from './pages/ProfilePage.tsx';
 import OrdersPage from './pages/OrdersPage.tsx';
+import AdminPage from './pages/AdminPage.tsx';
 import ProtectedRoute from './components/ProtectedRoute.tsx';
 import NotFoundPage from './pages/NotFoundPage.tsx';
 
@@ -51,6 +52,11 @@ function App() {
             <Route path="orders" element={
               <ProtectedRoute>
                 <OrdersPage />
+              </ProtectedRoute>
+            } />
+            <Route path="admin" element={
+              <ProtectedRoute>
+                <AdminPage />
               </ProtectedRoute>
             } />
           </Route>

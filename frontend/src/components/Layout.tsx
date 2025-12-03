@@ -22,6 +22,7 @@ const Layout: React.FC = () => {
     { name: 'Home', href: '/', current: location.pathname === '/' },
     { name: 'Shop', href: '/shop', current: location.pathname === '/shop' },
     { name: 'Cart', href: '/cart', current: location.pathname === '/cart' },
+    ...(user?.role === 'admin' ? [{ name: 'Admin', href: '/admin', current: location.pathname === '/admin' }] : []),
   ];
 
   return (
@@ -89,7 +90,7 @@ const Layout: React.FC = () => {
                     className="flex items-center space-x-2 text-gray-700 hover:text-gray-900"
                   >
                     <UserIcon className="h-6 w-6" />
-                    <span className="hidden md:block">{user.name}</span>
+                    <span className="hidden md:block">{user.full_name || user.username}</span>
                   </Link>
                   <button
                     onClick={logout}

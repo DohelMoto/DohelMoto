@@ -19,6 +19,7 @@ class User(Base):
     google_id = Column(String(255), unique=True, index=True)
     is_active = Column(Boolean, default=True)
     is_verified = Column(Boolean, default=False)
+    role = Column(String(20), default="user")  # "user" or "admin"
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
@@ -59,6 +60,14 @@ class Product(Base):
     is_featured = Column(Boolean, default=False)
     rating = Column(Float, default=0.0)
     review_count = Column(Integer, default=0)
+    # Additional fields for off-road parts
+    sku = Column(String(100), unique=True, index=True)  # Stock Keeping Unit
+    brand = Column(String(100))  # Brand name (e.g., "Can-Am", "Polaris")
+    part_number = Column(String(100))  # Manufacturer part number
+    compatibility = Column(JSON)  # Compatible vehicles/models (e.g., {"vehicles": ["Maverick X3", "RZR"]})
+    weight = Column(DECIMAL(8, 2))  # Weight in kg
+    dimensions = Column(JSON)  # {"length": 10, "width": 5, "height": 3}
+    warranty = Column(String(50))  # Warranty period
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 

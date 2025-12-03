@@ -7,6 +7,7 @@ export interface User {
   is_active: boolean;
   is_verified: boolean;
   is_google_user: boolean;
+  role?: string; // "user" or "admin"
   created_at: string;
 }
 
@@ -23,7 +24,15 @@ export interface Product {
   is_featured: boolean;
   rating: number;
   review_count: number;
+  sku?: string;
+  brand?: string;
+  part_number?: string;
+  compatibility?: Record<string, any>; // Compatible vehicles/models
+  weight?: number;
+  dimensions?: Record<string, number>; // {length, width, height}
+  warranty?: string;
   created_at: string;
+  updated_at?: string;
   category?: Category;
 }
 

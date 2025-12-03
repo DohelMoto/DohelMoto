@@ -190,5 +190,26 @@ export const uploadAPI = {
     api.delete('/upload/', { params: { file_url: fileUrl } }),
 };
 
+// Admin API
+export const adminAPI = {
+  createProduct: (productData: any): Promise<AxiosResponse<Product>> =>
+    api.post('/products/', productData),
+  
+  updateProduct: (productId: string, productData: any): Promise<AxiosResponse<Product>> =>
+    api.put(`/products/${productId}`, productData),
+  
+  deleteProduct: (productId: string): Promise<AxiosResponse<{ message: string }>> =>
+    api.delete(`/products/${productId}`),
+  
+  createCategory: (categoryData: any): Promise<AxiosResponse<Category>> =>
+    api.post('/categories/', categoryData),
+  
+  updateCategory: (categoryId: string, categoryData: any): Promise<AxiosResponse<Category>> =>
+    api.put(`/categories/${categoryId}`, categoryData),
+  
+  deleteCategory: (categoryId: string): Promise<AxiosResponse<{ message: string }>> =>
+    api.delete(`/categories/${categoryId}`),
+};
+
 export default api;
 

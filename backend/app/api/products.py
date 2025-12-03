@@ -5,7 +5,7 @@ from typing import List, Optional
 from app.database import get_db
 from app.models import Product, Category, Review
 from app.schemas import ProductResponse, ProductCreate, ProductUpdate, CategoryResponse
-from app.auth import get_current_active_user, get_current_user
+from app.auth import get_current_active_user, get_current_user, get_current_admin_user
 from app.models import User
 from uuid import UUID
 
@@ -32,7 +32,10 @@ async def get_products(
         query = query.filter(
             or_(
                 Product.name.ilike(search_term),
-                Product.description.ilike(search_term)
+                Product.description.ilike(search_term),
+                Product.sku.ilike(search_term),
+                Product.brand.ilike(search_term),
+                Product.part_number.ilike(search_term)
             )
         )
     
@@ -83,20 +86,29 @@ async def search_products(
     q: str = Query(..., min_length=1),
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
+    brand: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
-    """Search products by name or description"""
+    """Search products by name, description, SKU, brand, or part number"""
     search_term = f"%{q}%"
-    products = db.query(Product).filter(
+    query = db.query(Product).filter(
         and_(
             or_(
                 Product.name.ilike(search_term),
-                Product.description.ilike(search_term)
+                Product.description.ilike(search_term),
+                Product.sku.ilike(search_term),
+                Product.brand.ilike(search_term),
+                Product.part_number.ilike(search_term)
             ),
             Product.is_active == True
         )
-    ).offset(skip).limit(limit).all()
+    )
     
+    # Filter by brand if provided
+    if brand:
+        query = query.filter(Product.brand.ilike(f"%{brand}%"))
+    
+    products = query.offset(skip).limit(limit).all()
     return products
 
 @router.get("/featured/", response_model=List[ProductResponse])
@@ -114,15 +126,20 @@ async def get_featured_products(
     
     return products
 
-# Admin endpoints (require authentication)
+# Admin endpoints (require admin authentication)
 @router.post("/", response_model=ProductResponse)
 async def create_product(
     product_data: ProductCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_admin_user)
 ):
     """Create a new product (admin only)"""
-    # In a real app, you'd check if user is admin
+    # Check if SKU already exists
+    if product_data.sku:
+        existing = db.query(Product).filter(Product.sku == product_data.sku).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="Product with this SKU already exists")
+    
     db_product = Product(**product_data.dict())
     db.add(db_product)
     db.commit()
@@ -134,13 +151,18 @@ async def update_product(
     product_id: UUID,
     product_data: ProductUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_admin_user)
 ):
     """Update a product (admin only)"""
-    # In a real app, you'd check if user is admin
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
+    
+    # Check if SKU already exists (if being updated)
+    if product_data.sku and product_data.sku != product.sku:
+        existing = db.query(Product).filter(Product.sku == product_data.sku).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="Product with this SKU already exists")
     
     update_data = product_data.dict(exclude_unset=True)
     for field, value in update_data.items():
@@ -154,10 +176,9 @@ async def update_product(
 async def delete_product(
     product_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_admin_user)
 ):
-    """Delete a product (admin only)"""
-    # In a real app, you'd check if user is admin
+    """Delete a product (admin only) - soft delete"""
     product = db.query(Product).filter(Product.id == product_id).first()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
