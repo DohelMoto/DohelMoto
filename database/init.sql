@@ -156,7 +156,7 @@ SELECT
     p.sku,
     p.brand,
     p.part_number,
-    p.compatibility,
+    p.compatibility::jsonb,
     p.stock_quantity,
     p.is_featured,
     p.rating,
