@@ -211,5 +211,6 @@ export const adminAPI = {
     api.delete(`/categories/${categoryId}`),
 };
 
+export { api };
 export default api;
 
